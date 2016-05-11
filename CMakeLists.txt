@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
 PROJECT(libqhy C CXX)
 
+<<<<<<< HEAD
 set(LIBQHY_VERSION "0.1.8")
+=======
+set(LIBQHY_VERSION "0.1.7")
+>>>>>>> 1ce69c3... Added QHY6M to udev rules. Fixed quotes in lib name.|
 set(LIBQHY_SOVERSION "0")
 
 IF (APPLE)
