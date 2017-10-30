@@ -50,13 +50,23 @@ IF(UNIX AND NOT WIN32)
 ENDIF(UNIX AND NOT WIN32)
 
 
-
-
 # Make sure symbolic links are installed
-file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/make_libqhy_symlink.cmake "
-exec_program(${CMAKE_COMMAND} ARGS -E create_symlink ${LIB_INSTALL_DIR}${LIB_POSTFIX}/${LIBQHY_TARGET_FILENAME} ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION})\n
-exec_program(${CMAKE_COMMAND} ARGS -E create_symlink ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION} ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so)\n
-")
+#file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/make_libqhy_symlink.cmake "
+#exec_program(${CMAKE_COMMAND} ARGS -E create_symlink ${LIB_INSTALL_DIR}${LIB_POSTFIX}/${LIBQHY_TARGET_FILENAME} ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION})\n
+#exec_program(${CMAKE_COMMAND} ARGS -E create_symlink ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION} ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so)\n
+#")
+INSTALL(CODE "execute_process( \
+    COMMAND ${CMAKE_COMMAND} -E create_symlink \
+    ${LIB_INSTALL_DIR}${LIB_POSTFIX}/${LIBQHY_TARGET_FILENAME} \
+    ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION} \
+    )"
+)
+INSTALL(CODE "execute_process( \
+    COMMAND ${CMAKE_COMMAND} -E create_symlink \
+    ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION} \
+    ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so \
+    )"
+)
 
 install(FILES qhyccd.h qhyccdcamdef.h qhyccderr.h qhyccdstruct.h DESTINATION include/libqhy)
 install(FILES ${CMAKE_BINARY_DIR}/${LIBQHY_TARGET_FILENAME} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
@@ -67,12 +77,23 @@ install(
    file(INSTALL DESTINATION ${FIRMWARE_INSTALL_DIR} TYPE FILE FILES \${QHY_FIRMWARE})"
  )
 
-install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/make_libqhy_symlink.cmake)
+#install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/make_libqhy_symlink.cmake)
 
 ENDIF (APPLE)
 
 #debian package
 IF(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
+# prepare postinstall script
+   SET(POSTINST ${CMAKE_BINARY_DIR}/debian_postinst)
+   EXEC_PROGRAM(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/debian/postinst ${POSTINST})
+# crutch for symlinks
+   EXEC_PROGRAM(echo ARGS ln -s ${LIB_INSTALL_DIR}${LIB_POSTFIX}/${LIBQHY_TARGET_FILENAME} ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION} >> ${POSTINST})
+   EXEC_PROGRAM(echo ARGS chown  root.root ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION} >> ${POSTINST})
+   EXEC_PROGRAM(echo ARGS chmod 644 ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION} >> ${POSTINST})
+   EXEC_PROGRAM(echo ARGS ln -s ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so.${LIBQHY_SOVERSION}} ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so >> ${POSTINST})
+   EXEC_PROGRAM(echo ARGS chown root.root ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so >> ${POSTINST})
+   EXEC_PROGRAM(echo ARGS chmod  644 ${LIB_INSTALL_DIR}${LIB_POSTFIX}/libqhy.so >> ${POSTINST})
+   SET(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
    SET(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
    SET(CPACK_GENERATOR "DEB")
    SET(CPACK_PACKAGE_DESCRIPTION "Provides drivers for QHY cameras family")
@@ -84,6 +105,6 @@ IF(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
    SET(CPACK_PACKAGE_VERSION_PATCH "${LIBQHY_VERSION_BUILD}")
    SET(CPACK_PACKAGE_FILE_NAME "libqhy-${LIBQHY_VERSION}-${CMAKE_HOST_SYSTEM_PROCESSOR}")
    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libusb-1.0-0, fxload")
-   SET(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/debian/postinst")
+   SET(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_BINARY_DIR}/debian_postinst")
    INCLUDE(CPack)
 ENDIF(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
